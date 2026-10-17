@@ -1880,7 +1880,7 @@ mod authenticated {
         server.mock(|when, then| {
             when.method(POST).path("/order");
             then.status(StatusCode::OK).json_body(json!({
-                "error_msg": "",
+                "errorMsg": "",
                 "makingAmount": "50",
                 "orderID": MATCHED_ORDER_ID,
                 "status": "matched",
@@ -1889,6 +1889,23 @@ mod authenticated {
                 "tradeIDs": trade_ids
             }));
         })
+    }
+
+    /// Asserts that `response` is the [`mount_unhashed_match`] answer as the server sent it,
+    /// for `trade_ids`: no hash was resolved.
+    fn assert_unhashed_match(response: &PostOrderResponse, trade_ids: &[&str]) {
+        let sent = "the response is the one the server sent";
+        assert!(response.success, "{sent}");
+        assert_eq!(response.error_msg.as_deref(), Some(""), "{sent}");
+        assert_eq!(response.order_id, MATCHED_ORDER_ID, "{sent}");
+        assert_eq!(response.status, OrderStatusType::Matched, "{sent}");
+        assert_eq!(response.making_amount, Decimal::from(50), "{sent}");
+        assert_eq!(response.taking_amount, Decimal::from(100), "{sent}");
+        assert_eq!(response.trade_ids, trade_ids, "{sent}");
+        assert!(
+            response.transaction_hashes.is_empty(),
+            "no hash was resolved"
+        );
     }
 
     /// Mounts `GET /data/trades?id=<trade_id>` answering, after `delay`, a trade that is
@@ -1932,10 +1949,7 @@ mod authenticated {
             elapsed < Duration::from_secs(31),
             "the backfill outlived its 30 s window: {elapsed:?}"
         );
-        assert_eq!(response.order_id, MATCHED_ORDER_ID);
-        assert_eq!(response.status, OrderStatusType::Matched);
-        assert_eq!(response.trade_ids, vec!["trade-1", "trade-2"]);
-        assert!(response.transaction_hashes.is_empty());
+        assert_unhashed_match(&response, &["trade-1", "trade-2"]);
         order_mock.assert();
         first.assert();
 
@@ -1969,9 +1983,7 @@ mod authenticated {
             elapsed < Duration::from_millis(200),
             "the wait outlived the window: {elapsed:?}"
         );
-        assert_eq!(response.order_id, MATCHED_ORDER_ID);
-        assert_eq!(response.trade_ids, vec!["trade-1"]);
-        assert!(response.transaction_hashes.is_empty());
+        assert_unhashed_match(&response, &["trade-1"]);
         order_mock.assert();
         trade_mock.assert();
 
@@ -1995,9 +2007,7 @@ mod authenticated {
 
         let response = client.post_order(signed_order).await?;
 
-        assert_eq!(response.order_id, MATCHED_ORDER_ID);
-        assert_eq!(response.trade_ids, vec!["trade-1"]);
-        assert!(response.transaction_hashes.is_empty());
+        assert_unhashed_match(&response, &["trade-1"]);
         order_mock.assert();
         trade_mock.assert_calls(0);
 
