@@ -11,7 +11,7 @@ use serde_with::json::JsonString;
 use serde_with::{DisplayFromStr, StringWithSeparator, formats::CommaSeparator, serde_as};
 
 use super::{MarketVersion, ResolutionStatus};
-use crate::serde_helpers::StringFromAny;
+use crate::serde_helpers::{DecimalU256, StringFromAny};
 use crate::types::{Address, B256, ConditionId, Decimal, U256};
 
 /// Image optimization metadata.
@@ -423,11 +423,11 @@ pub struct Market {
     /// The protocol this market trades on; it selects between `clob_token_ids` (V1) and
     /// `position_ids` (V2).
     pub version: Option<MarketVersion>,
-    #[serde_as(as = "Option<JsonString>")]
+    #[serde_as(as = "Option<JsonString<Vec<DecimalU256>>>")]
     pub clob_token_ids: Option<Vec<U256>>,
     /// Protocol V2 outcome position ids (a JSON array of decimal strings, unlike the
     /// JSON-encoded `clob_token_ids`).
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    #[serde_as(as = "Option<Vec<DecimalU256>>")]
     pub position_ids: Option<Vec<U256>>,
     /// Protocol V2 resolution state.
     pub resolution_status: Option<ResolutionStatus>,

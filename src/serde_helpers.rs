@@ -80,6 +80,44 @@ impl serde_with::SerializeAs<String> for StringFromAny {
     }
 }
 
+/// A `serde_as` type for a `U256` written as a decimal string: ASCII digits only, so a sign,
+/// a `0x` prefix, whitespace or an empty string is rejected (the V2 API migration requires
+/// rejecting non-decimal trading ids). Leading zeros are allowed; overflow is an error.
+#[cfg(feature = "gamma")]
+pub struct DecimalU256;
+
+#[cfg(feature = "gamma")]
+impl<'de> serde_with::DeserializeAs<'de, crate::types::U256> for DecimalU256 {
+    fn deserialize_as<D>(deserializer: D) -> std::result::Result<crate::types::U256, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::Deserialize as _;
+        use serde::de::Error as _;
+
+        let digits = String::deserialize(deserializer)?;
+        if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+            return Err(D::Error::custom(format!(
+                "expected a decimal id, got {digits:?}"
+            )));
+        }
+        crate::types::U256::from_str_radix(&digits, 10).map_err(D::Error::custom)
+    }
+}
+
+#[cfg(feature = "gamma")]
+impl serde_with::SerializeAs<crate::types::U256> for DecimalU256 {
+    fn serialize_as<S>(
+        source: &crate::types::U256,
+        serializer: S,
+    ) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(source)
+    }
+}
+
 /// Deserialize JSON with unknown field warnings.
 ///
 /// This function deserializes JSON to a target type while detecting and logging

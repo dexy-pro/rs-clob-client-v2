@@ -1,0 +1,48 @@
+{
+  "data": [
+    {
+      "proxy_wallet": "0x005ed998fcb786679eb8bfd0d20c15c0903d6d8e",
+      "token_id": "2092302913485160589062339453872340900135638390976912583129961072654988670093",
+      "condition_id": "0x800a14bce938fc441ea469ed9dd139445cfd9209b37d9db0c25a64b0216e036c",
+      "current_size": 0.92,
+      "avg_price": 0.9989,
+      "entry_cost_usdc": 0.919,
+      "entry_fees_usdc": 0.000045,
+      "total_cost_usdc": 0.919045,
+      "current_price": 1.0,
+      "current_value": 0.92,
+      "total_size": 0.0,
+      "realized_pnl": -0.3598,
+      "unrealized_pnl": 0.0009,
+      "total_pnl": -0.3589,
+      "percent_pnl": 0.0979,
+      "percent_realized_pnl": 0.0,
+      "status": "REDEEMABLE",
+      "redeemable": true,
+      "mergeable": true,
+      "negative_risk": true,
+      "archived": false,
+      "title": "Will the highest temperature in Moscow be 18°C on October 16?",
+      "slug": "highest-temperature-in-moscow-on-october-16-2026-18c",
+      "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/moscow-4addd6349b.jpg",
+      "event_id": "1186592",
+      "event_slug": "highest-temperature-in-moscow-on-october-16-2026",
+      "outcome": "No",
+      "outcome_index": 1,
+      "opposite_outcome": "Yes",
+      "opposite_token_id": "96853163695590857679446613248402086870082658143577372166388895466801294269865",
+      "end_date": "2026-10-16",
+      "last_event_at": 1792187442,
+      "first_entry_at": 1792102742,
+      "name": "0x005ED998fCb786679Eb8Bfd0d20c15C0903D6D8E-1778811773658",
+      "profile_image": "",
+      "verified": false
+    }
+  ],
+  "pagination": {
+    "limit": 1,
+    "offset": 0,
+    "has_more": true,
+    "next_cursor": "eyJkYXRhIjp7InR5cGUiOiJwb3NpdGlvbnMiLCJwYXJhbXMiOnsibCI6MSwiZCI6MSwiayI6IjEwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAuOTIwMCIsInQiOiIyMDkyMzAyOTEzNDg1MTYwNTg5MDYyMzM5NDUzODcyMzQwOTAwMTM1NjM4MzkwOTc2OTEyNTgzMTI5OTYxMDcyNjU0OTg4NjcwMDkzIiwiYSI6InUiLCJhdiI6IjB4MDA1ZWQ5OThmY2I3ODY2NzllYjhiZmQwZDIwYzE1YzA5MDNkNmQ4ZSIsInN0IjoiUkVERUVNQUJMRSIsInMiOiJDVVJSRU5UX1ZBTFVFIiwiZGlyIjoiREVTQyJ9fSwic2lnIjoiZGQ1N2VhNmVkNWY3M2FjNjVkZDY4NGEzMWVjZjlkMWIifQ"
+  }
+}

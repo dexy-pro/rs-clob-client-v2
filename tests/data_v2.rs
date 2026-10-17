@@ -80,10 +80,14 @@ async fn trades_page_keeps_ctf_and_bytes31_rows_and_its_cursor() -> anyhow::Resu
 async fn trades_follow_the_cursor_until_it_is_null() -> anyhow::Result<()> {
     let server = MockServer::start();
     let client = Client::new(&server.base_url())?;
+    // The cursor carries the page size and seek anchor; the walk's user and
+    // feed filters are resent with it.
     let last = server.mock(|when, then| {
         when.method(GET)
             .path("/v2/trades")
             .query_param("user", LEADER)
+            .query_param("taker_only", "false")
+            .query_param("start", "1792201000")
             .query_param("cursor", "next-page");
         then.status(StatusCode::OK).json_body(serde_json::json!({
             "data": [],
@@ -93,6 +97,8 @@ async fn trades_follow_the_cursor_until_it_is_null() -> anyhow::Result<()> {
 
     let mut request = TradesRequest::builder()
         .user(address!("f753f261f0c07ef3ec3b9eb15d51cbdaa5340b0a"))
+        .taker_only(false)
+        .start(1_792_201_000)
         .build();
     request.cursor = Some("next-page".to_owned());
     let page = client.trades_v2(&request).await?;
@@ -105,21 +111,21 @@ async fn trades_follow_the_cursor_until_it_is_null() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn positions_page_decodes_the_v2_row() -> anyhow::Result<()> {
+async fn open_positions_page_decodes_the_v2_row() -> anyhow::Result<()> {
     let server = MockServer::start();
     let client = Client::new(&server.base_url())?;
     let mock = server.mock(|when, then| {
         when.method(GET)
             .path("/v2/positions")
             .query_param("user", LEADER)
-            .query_param("status", "REDEEMABLE");
+            .query_param("status", "OPEN");
         then.status(StatusCode::OK)
-            .json_body(fixture("data_v2_positions.json"));
+            .json_body(fixture("data_v2_positions_open.json"));
     });
 
     let request = PositionsRequest::builder()
         .user(address!("f753f261f0c07ef3ec3b9eb15d51cbdaa5340b0a"))
-        .status(PositionStatus::Redeemable)
+        .status(PositionStatus::Open)
         .build();
     let page = client.positions_v2(&request).await?;
 
@@ -144,6 +150,85 @@ async fn positions_page_decodes_the_v2_row() -> anyhow::Result<()> {
     assert_eq!(row.outcome_index, 1);
     assert!(row.opposite_token_id.is_some());
     assert_eq!(row.end_date.to_string(), "2026-10-16");
+    Ok(())
+}
+
+#[tokio::test]
+async fn redeemable_and_closed_rows_carry_their_own_state() -> anyhow::Result<()> {
+    const HOLDER: &str = "0x005ed998fcb786679eb8bfd0d20c15c0903d6d8e";
+    let server = MockServer::start();
+    let client = Client::new(&server.base_url())?;
+    let redeemable = server.mock(|when, then| {
+        when.method(GET)
+            .path("/v2/positions")
+            .query_param("user", HOLDER)
+            .query_param("status", "REDEEMABLE");
+        then.status(StatusCode::OK)
+            .json_body(fixture("data_v2_positions_redeemable.json"));
+    });
+    let closed = server.mock(|when, then| {
+        when.method(GET)
+            .path("/v2/positions")
+            .query_param("user", HOLDER)
+            .query_param("status", "CLOSED");
+        then.status(StatusCode::OK)
+            .json_body(fixture("data_v2_positions_closed.json"));
+    });
+    let request = |status| {
+        PositionsRequest::builder()
+            .user(address!("005ed998fcb786679eb8bfd0d20c15c0903d6d8e"))
+            .status(status)
+            .build()
+    };
+
+    let resolved = client
+        .positions_v2(&request(PositionStatus::Redeemable))
+        .await?;
+    let exited = client
+        .positions_v2(&request(PositionStatus::Closed))
+        .await?;
+
+    redeemable.assert();
+    closed.assert();
+    let held = &resolved.data[0];
+    assert_eq!(held.status, PositionStatus::Redeemable);
+    assert!(held.redeemable, "a resolved, still-held row is redeemable");
+    assert!(held.current_size > dec!(0));
+    let gone = &exited.data[0];
+    assert_eq!(gone.status, PositionStatus::Closed);
+    assert!(!gone.redeemable);
+    assert_eq!(gone.current_size, dec!(0), "a closed row holds nothing");
+    Ok(())
+}
+
+#[tokio::test]
+async fn positions_cursor_page_resends_the_anchor_and_filters() -> anyhow::Result<()> {
+    let server = MockServer::start();
+    let client = Client::new(&server.base_url())?;
+    // The cursor binds status/sort; the anchor (`user`) must be resent, and
+    // restating the filters the walk started with is allowed.
+    let next = server.mock(|when, then| {
+        when.method(GET)
+            .path("/v2/positions")
+            .query_param("user", LEADER)
+            .query_param("status", "REDEEMABLE")
+            .query_param("cursor", "page-2");
+        then.status(StatusCode::OK).json_body(serde_json::json!({
+            "data": [],
+            "pagination": {"limit": 500, "offset": 500, "has_more": false, "next_cursor": null}
+        }));
+    });
+
+    let mut request = PositionsRequest::builder()
+        .user(address!("f753f261f0c07ef3ec3b9eb15d51cbdaa5340b0a"))
+        .status(PositionStatus::Redeemable)
+        .limit(500)
+        .build();
+    request.cursor = Some("page-2".to_owned());
+    let page = client.positions_v2(&request).await?;
+
+    next.assert();
+    assert_eq!(page.pagination.next_cursor, None);
     Ok(())
 }
 

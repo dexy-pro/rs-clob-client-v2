@@ -128,6 +128,31 @@ async fn gamma_v1_and_unknown_versions_are_explicit() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test]
+fn gamma_trading_ids_must_be_decimal() {
+    let decode = |extra: serde_json::Value| -> Result<gamma::types::response::Market, _> {
+        serde_json::from_value(gamma_market("v2", &extra))
+    };
+    let overflow = format!("1{}", "0".repeat(78));
+
+    for bad in ["0x10", "+1", "-1", " 1", "1 ", "", "1e3", overflow.as_str()] {
+        assert!(
+            decode(json!({"positionIds": [bad]})).is_err(),
+            "positionIds {bad:?} must be rejected"
+        );
+        assert!(
+            decode(json!({"clobTokenIds": serde_json::to_string(&[bad]).unwrap()})).is_err(),
+            "clobTokenIds {bad:?} must be rejected"
+        );
+    }
+    let padded = decode(json!({"positionIds": ["007"], "clobTokenIds": "[\"0042\"]"})).unwrap();
+    assert_eq!(padded.position_ids, Some(vec![U256::from(7_u8)]));
+    assert_eq!(padded.clob_token_ids, Some(vec![U256::from(42_u8)]));
+    let max = U256::MAX.to_string();
+    let widest = decode(json!({"positionIds": [max]})).unwrap();
+    assert_eq!(widest.position_ids, Some(vec![U256::MAX]));
+}
+
 #[tokio::test]
 async fn clob_market_by_token_and_book_keep_the_condition_width() -> anyhow::Result<()> {
     let server = MockServer::start();

@@ -1,0 +1,48 @@
+{
+  "data": [
+    {
+      "proxy_wallet": "0x005ed998fcb786679eb8bfd0d20c15c0903d6d8e",
+      "token_id": "49886028487112281574279422474095181525913123582177075375309734310587117931078",
+      "condition_id": "0xfa021d817ad33e0fa28e04051b4fea25b0a090e94bb1b2a38b377bce9778eb8e",
+      "current_size": 0.0,
+      "avg_price": 0.0608,
+      "entry_cost_usdc": 0.0,
+      "entry_fees_usdc": 20.639416,
+      "total_cost_usdc": 20.639416,
+      "current_price": 0.0,
+      "current_value": 0.0,
+      "total_size": 5990.0868,
+      "realized_pnl": 40853.3487,
+      "unrealized_pnl": 0.0,
+      "total_pnl": 40853.3487,
+      "percent_pnl": 0.0,
+      "percent_realized_pnl": 11217.0007,
+      "status": "CLOSED",
+      "redeemable": false,
+      "mergeable": false,
+      "negative_risk": true,
+      "archived": false,
+      "title": "Will Kylian Mbappe be the top goalscorer at the 2026 FIFA World Cup?",
+      "slug": "will-kylian-mbappe-be-the-top-goalscorer-at-the-2026-fifa-world-cup",
+      "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/2026-fifa-world-cup-top-goalscorer-g8rHBY_mzgM7.jpg",
+      "event_id": "413862",
+      "event_slug": "world-cup-golden-boot-winner",
+      "outcome": "No",
+      "outcome_index": 1,
+      "opposite_outcome": "Yes",
+      "opposite_token_id": "109346928118758112535699085058290058645349086894874742550948182824395861480007",
+      "end_date": "2026-07-20",
+      "last_event_at": 1784577807,
+      "first_entry_at": 1783117898,
+      "name": "0x005ED998fCb786679Eb8Bfd0d20c15C0903D6D8E-1778811773658",
+      "profile_image": "",
+      "verified": false
+    }
+  ],
+  "pagination": {
+    "limit": 1,
+    "offset": 0,
+    "has_more": true,
+    "next_cursor": "eyJkYXRhIjp7InR5cGUiOiJwb3NpdGlvbnMiLCJwYXJhbXMiOnsibCI6MSwiZCI6MSwiayI6IjQwODUzLjM0ODc1NDAwMDAwMCIsInQiOiI0OTg4NjAyODQ4NzExMjI4MTU3NDI3OTQyMjQ3NDA5NTE4MTUyNTkxMzEyMzU4MjE3NzA3NTM3NTMwOTczNDMxMDU4NzExNzkzMTA3OCIsImEiOiJ1IiwiYXYiOiIweDAwNWVkOTk4ZmNiNzg2Njc5ZWI4YmZkMGQyMGMxNWMwOTAzZDZkOGUiLCJzdCI6IkNMT1NFRCIsInMiOiJSRUFMSVpFRF9QTkwiLCJkaXIiOiJERVNDIn19LCJzaWciOiJiNTI0YTkwNTkxYjE1YzUxNzQ3NDYwMWZjMjBiOTY3NCJ9"
+  }
+}
