@@ -64,6 +64,8 @@ static CONFIG: phf::Map<ChainId, ContractConfig> = phf_map! {
         neg_risk_adapter: None,
         exchange_v2: Some(address!("0xE111180000d2663C0091e4f400237545B87B996B")),
         exchange_v3: Some(address!("0xe3333700cA9d93003F00f0F71f8515005F6c00Aa")),
+        position_manager: Some(address!("0x006F54F7f9A22e0000CC2AB60031000000ae9fEF")),
+        router: Some(address!("0x12121212006e4CD160D18e3f00711DA5c3372600")),
     },
     80002_u64 => ContractConfig {
         exchange: address!("0xdFE02Eb6733538f8Ea35D585af8DE5958AD99E40"),
@@ -72,6 +74,8 @@ static CONFIG: phf::Map<ChainId, ContractConfig> = phf_map! {
         neg_risk_adapter: None,
         exchange_v2: Some(address!("0xE111180000d2663C0091e4f400237545B87B996B")),
         exchange_v3: Some(address!("0x9fE6e61422AdB6F610d8597F9684b16912D50C3D")),
+        position_manager: None,
+        router: None,
     },
 };
 
@@ -83,6 +87,8 @@ static NEG_RISK_CONFIG: phf::Map<ChainId, ContractConfig> = phf_map! {
         neg_risk_adapter: Some(address!("0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296")),
         exchange_v2: Some(address!("0xe2222d279d744050d28e00520010520000310F59")),
         exchange_v3: Some(address!("0xe3333700cA9d93003F00f0F71f8515005F6c00Aa")),
+        position_manager: Some(address!("0x006F54F7f9A22e0000CC2AB60031000000ae9fEF")),
+        router: Some(address!("0x12121212006e4CD160D18e3f00711DA5c3372600")),
     },
     80002_u64 => ContractConfig {
         exchange: address!("0xC5d563A36AE78145C45a50134d48A1215220f80a"),
@@ -91,6 +97,8 @@ static NEG_RISK_CONFIG: phf::Map<ChainId, ContractConfig> = phf_map! {
         neg_risk_adapter: Some(address!("0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296")),
         exchange_v2: Some(address!("0xe2222d279d744050d28e00520010520000310F59")),
         exchange_v3: Some(address!("0x9fE6e61422AdB6F610d8597F9684b16912D50C3D")),
+        position_manager: None,
+        router: None,
     },
 };
 
@@ -130,6 +138,13 @@ pub struct ContractConfig {
     pub exchange_v2: Option<Address>,
     /// The V3 exchange contract address used for Polymarket V2 position orders.
     pub exchange_v3: Option<Address>,
+    /// `PositionManager`: the Polymarket Protocol V2 ERC-1155 ledger that holds V2 positions
+    /// (docs `/resources/contracts`). The same contract serves standard and neg-risk markets.
+    pub position_manager: Option<Address>,
+    /// Router: the Polymarket Protocol V2 split/merge/redeem entry point; it needs
+    /// `PositionManager` `setApprovalForAll(router, true)` to merge or redeem
+    /// (docs `/migrate/polymarket-v2/contract-integrations`).
+    pub router: Option<Address>,
 }
 
 /// Wallet contract configuration for CREATE2 address derivation
@@ -325,6 +340,25 @@ mod tests {
             cfg.exchange_v3,
             Some(address!("0xe3333700cA9d93003F00f0F71f8515005F6c00Aa"))
         );
+    }
+
+    #[test]
+    fn polygon_configs_carry_the_v2_position_contracts() {
+        for neg_risk in [false, true] {
+            let cfg = contract_config(POLYGON, neg_risk).expect("missing config");
+            assert_eq!(
+                cfg.position_manager,
+                Some(address!("0x006F54F7f9A22e0000CC2AB60031000000ae9fEF")),
+                "neg_risk={neg_risk}"
+            );
+            assert_eq!(
+                cfg.router,
+                Some(address!("0x12121212006e4CD160D18e3f00711DA5c3372600")),
+                "neg_risk={neg_risk}"
+            );
+        }
+        let amoy = contract_config(AMOY, false).expect("missing config");
+        assert_eq!(amoy.router, None, "no documented Amoy deployment");
     }
 
     #[test]

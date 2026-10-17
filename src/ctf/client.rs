@@ -112,6 +112,41 @@ sol! {
             bytes32 conditionId,
             uint256[] calldata indexSets
         ) external;
+
+        /// ERC-1155 balance of one outcome token.
+        function balanceOf(address account, uint256 id) external view returns (uint256);
+
+        /// ERC-1155 balances of several (account, token) pairs.
+        function balanceOfBatch(
+            address[] calldata accounts,
+            uint256[] calldata ids
+        ) external view returns (uint256[] memory);
+    }
+
+    /// Polymarket Protocol V2 `PositionManager`: the ERC-1155 ledger of V2 positions.
+    ///
+    /// Source: docs `/migrate/polymarket-v2/contract-integrations`.
+    #[sol(rpc)]
+    interface IPositionManager {
+        /// ERC-1155 balance of one V2 position.
+        function balanceOf(address account, uint256 id) external view returns (uint256);
+
+        /// ERC-1155 balances of several (account, position) pairs.
+        function balanceOfBatch(
+            address[] calldata accounts,
+            uint256[] calldata ids
+        ) external view returns (uint256[] memory);
+    }
+
+    /// Polymarket Protocol V2 Router.
+    ///
+    /// Source: docs `/migrate/polymarket-v2/contract-integrations` (Router ABI). `conditionId` is
+    /// the 31-byte V2 condition, `outcomeIndex` is 0 (YES) or 1 (NO), and `amount` is in
+    /// six-decimal base units. The caller needs `PositionManager` `setApprovalForAll(router, true)`.
+    #[sol(rpc)]
+    interface IRouter {
+        /// Redeems `amount` of one resolved V2 outcome for pUSD.
+        function redeem(bytes31 conditionId, uint256 outcomeIndex, uint256 amount) external;
     }
 
     #[sol(rpc)]
