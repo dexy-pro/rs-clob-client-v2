@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::mem;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use alloy::dyn_abi::Eip712Domain;
 use alloy::primitives::{Signature, U256, keccak256};
@@ -87,7 +87,7 @@ const TERMINAL_CURSOR: &str = "LTE="; // base64("-1")
 
 pub(crate) const ORDER_VERSION_MISMATCH_ERROR: &str = "order_version_mismatch";
 
-const RESOLVE_TRADES_TIMEOUT: Duration = Duration::from_secs(30);
+const DEFAULT_TRANSACTION_HASH_WINDOW: Duration = Duration::from_secs(30);
 const RESOLVE_TRADES_POLL_INTERVAL: Duration = Duration::from_millis(250);
 
 // A trade is resolved once execution reached a terminal outcome: it either
@@ -447,6 +447,14 @@ pub struct Config {
     /// with an error for which [`crate::error::Error::is_timeout`] is `true`; for an order
     /// submission that means its outcome is unknown, not that it was rejected.
     timeout: Option<Duration>,
+    /// How long [`Client::post_order`] and [`Client::post_orders`] poll a matched order's
+    /// trades for their settlement transaction hashes. One deadline bounds every trade read
+    /// and every wait of that polling: no read starts after it and none outlives it. When it
+    /// passes, the submission response is returned as the server sent it, with the hashes
+    /// resolved so far. `Duration::ZERO` returns it at once, without reading trades. The
+    /// default is thirty (30) seconds.
+    #[builder(default = DEFAULT_TRANSACTION_HASH_WINDOW)]
+    transaction_hash_window: Duration,
     #[cfg(feature = "heartbeats")]
     #[builder(default = Duration::from_secs(5))]
     /// How often the [`Client`] will automatically submit heartbeats. The default is five (5) seconds.
@@ -460,6 +468,7 @@ impl Default for Config {
             geoblock_host: None,
             builder_code: None,
             timeout: None,
+            transaction_hash_window: DEFAULT_TRANSACTION_HASH_WINDOW,
             #[cfg(feature = "heartbeats")]
             heartbeat_interval: Duration::from_secs(5),
         }
@@ -1902,9 +1911,10 @@ impl<K: Kind> Client<Authenticated<K>> {
     /// When the order matches, the response carries the settlement
     /// transaction hashes of its fills in
     /// [`transaction_hashes`](PostOrderResponse::transaction_hashes), resolved
-    /// on a best-effort basis. If a hash is not available yet, the fill's
-    /// trade can be followed via
-    /// [`trade_ids`](PostOrderResponse::trade_ids).
+    /// on a best-effort basis within the configured transaction-hash window
+    /// ([`Config`]); when the window passes, the response is returned as the
+    /// server sent it. If a hash is not available yet, the fill's trade can be
+    /// followed via [`trade_ids`](PostOrderResponse::trade_ids).
     pub async fn post_order(&self, order: SignedOrder) -> Result<PostOrderResponse> {
         let defer_exec = order.defer_exec == Some(true);
         let request = self
@@ -1949,8 +1959,8 @@ impl<K: Kind> Client<Authenticated<K>> {
         let mut responses: Vec<PostOrderResponse> = result?;
 
         // Resolve all batch entries against a single polling window so a
-        // degraded pipeline delays the batch by at most one timeout, not one
-        // timeout per matched order.
+        // degraded pipeline delays the batch by at most one window, not one
+        // window per matched order.
         let pending_trade_ids: Vec<String> = responses
             .iter()
             .enumerate()
@@ -1981,9 +1991,11 @@ impl<K: Kind> Client<Authenticated<K>> {
 
     // Polls the given trades until every one reaches a terminal execution
     // outcome (it carries a settlement transaction hash or its status is
-    // FAILED) or the polling window elapses. Best-effort: returns whatever
-    // trades resolved in time and never fails.
+    // FAILED) or the configured window elapses. One deadline bounds every read
+    // and every wait: no read starts after it and none outlives it.
+    // Best-effort: returns whatever trades resolved in time and never fails.
     async fn wait_for_resolved_trades(&self, trade_ids: &[String]) -> Vec<TradeResponse> {
+        let deadline = tokio::time::Instant::now() + self.inner.config.transaction_hash_window;
         let mut ids: Vec<&String> = Vec::new();
         for id in trade_ids {
             if !id.is_empty() && !ids.contains(&id) {
@@ -1995,28 +2007,34 @@ impl<K: Kind> Client<Authenticated<K>> {
         }
 
         let mut resolved: Vec<Option<TradeResponse>> = vec![None; ids.len()];
-        let deadline = Instant::now() + RESOLVE_TRADES_TIMEOUT;
-
-        loop {
+        'polling: loop {
             for (index, id) in ids.iter().enumerate() {
                 if resolved[index].is_some() {
                     continue;
                 }
+                if tokio::time::Instant::now() >= deadline {
+                    break 'polling;
+                }
                 let request = TradesRequest::builder().id((*id).clone()).build();
-                let Ok(page) = self.trades(&request, None).await else {
-                    continue;
-                };
-                resolved[index] = page
-                    .data
-                    .into_iter()
-                    .find(|trade| trade.id == **id && is_trade_resolved(trade));
+                match tokio::time::timeout_at(deadline, self.trades(&request, None)).await {
+                    Err(_elapsed) => break 'polling,
+                    Ok(Err(_)) => {}
+                    Ok(Ok(page)) => {
+                        resolved[index] = page
+                            .data
+                            .into_iter()
+                            .find(|trade| trade.id == **id && is_trade_resolved(trade));
+                    }
+                }
             }
 
-            if resolved.iter().all(Option::is_some) || Instant::now() >= deadline {
-                return resolved.into_iter().flatten().collect();
+            if resolved.iter().all(Option::is_some) {
+                break;
             }
-            tokio::time::sleep(RESOLVE_TRADES_POLL_INTERVAL).await;
+            let next_poll = tokio::time::Instant::now() + RESOLVE_TRADES_POLL_INTERVAL;
+            tokio::time::sleep_until(next_poll.min(deadline)).await;
         }
+        resolved.into_iter().flatten().collect()
     }
 
     // Fills `transaction_hashes` on an order response whose trades executed

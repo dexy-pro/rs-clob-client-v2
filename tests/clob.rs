@@ -23,7 +23,7 @@ use uuid::Uuid;
 
 use crate::common::{
     POLY_ADDRESS, POLY_API_KEY, POLY_PASSPHRASE, PRIVATE_KEY, create_authenticated,
-    ensure_requirements, token_1, token_2,
+    create_authenticated_with, ensure_requirements, token_1, token_2,
 };
 
 mod unauthenticated {
@@ -1419,7 +1419,6 @@ mod unauthenticated {
 }
 
 mod authenticated {
-    #[cfg(feature = "heartbeats")]
     use std::time::Duration;
 
     use alloy::signers::Signer as _;
@@ -1865,6 +1864,142 @@ mod authenticated {
         order_mock.assert();
         failed_mock.assert();
         executed_mock.assert();
+
+        Ok(())
+    }
+
+    const MATCHED_ORDER_ID: &str =
+        "0x23b457271bce9fa09b4f79125c9ec09e968235a462de82e318ef4eb6fe0ffeb0";
+
+    /// Mounts `POST /order` answering a match of `trade_ids` whose hashes are not known yet.
+    fn mount_unhashed_match<'server>(
+        server: &'server MockServer,
+        trade_ids: &[&str],
+    ) -> httpmock::Mock<'server> {
+        let trade_ids = trade_ids.to_vec();
+        server.mock(|when, then| {
+            when.method(POST).path("/order");
+            then.status(StatusCode::OK).json_body(json!({
+                "error_msg": "",
+                "makingAmount": "50",
+                "orderID": MATCHED_ORDER_ID,
+                "status": "matched",
+                "success": true,
+                "takingAmount": "100",
+                "tradeIDs": trade_ids
+            }));
+        })
+    }
+
+    /// Mounts `GET /data/trades?id=<trade_id>` answering, after `delay`, a trade that is
+    /// matched but not yet mined (no hash), so the backfill never resolves it.
+    fn mount_unresolved_trade<'server>(
+        server: &'server MockServer,
+        trade_id: &str,
+        delay: Duration,
+    ) -> httpmock::Mock<'server> {
+        server.mock(|when, then| {
+            when.method(GET)
+                .path("/data/trades")
+                .query_param("id", trade_id);
+            then.status(StatusCode::OK)
+                .delay(delay)
+                .json_body(trades_page(&[trade_json(trade_id, "MATCHED", "")]));
+        })
+    }
+
+    /// Review r2-sdk run 1 measured 48 s here: two trade reads of 24 s each under the
+    /// default 30 s window, with the deadline checked only after a full pass. The window
+    /// now bounds the second read too, and the order's answer is returned as submitted.
+    #[tokio::test]
+    async fn post_order_backfill_ends_at_the_default_window_while_reads_are_slow()
+    -> anyhow::Result<()> {
+        let server = MockServer::start();
+        let client = create_authenticated(&server).await?;
+        ensure_requirements(&server, token_1(), TickSize::Hundredth);
+        let order_mock = mount_unhashed_match(&server, &["trade-1", "trade-2"]);
+        let slow_read = Duration::from_secs(24);
+        let first = mount_unresolved_trade(&server, "trade-1", slow_read);
+        let _second = mount_unresolved_trade(&server, "trade-2", slow_read);
+        let signer = LocalSigner::from_str(PRIVATE_KEY)?.with_chain_id(Some(POLYGON));
+        let signed_order = client.sign(&signer, SignableOrder::default()).await?;
+
+        let started = std::time::Instant::now();
+        let response = client.post_order(signed_order).await?;
+        let elapsed = started.elapsed();
+
+        assert!(
+            elapsed < Duration::from_secs(31),
+            "the backfill outlived its 30 s window: {elapsed:?}"
+        );
+        assert_eq!(response.order_id, MATCHED_ORDER_ID);
+        assert_eq!(response.status, OrderStatusType::Matched);
+        assert_eq!(response.trade_ids, vec!["trade-1", "trade-2"]);
+        assert!(response.transaction_hashes.is_empty());
+        order_mock.assert();
+        first.assert();
+
+        Ok(())
+    }
+
+    /// A configured window shorter than the 250 ms poll interval: the wait after the first
+    /// read ends at the window, not after a whole interval.
+    #[tokio::test]
+    async fn post_order_backfill_window_is_configurable_and_bounds_the_wait() -> anyhow::Result<()>
+    {
+        let server = MockServer::start();
+        let window = Duration::from_millis(50);
+        let config = Config::builder()
+            .use_server_time(true)
+            .transaction_hash_window(window)
+            .build();
+        let client = create_authenticated_with(&server, config).await?;
+        ensure_requirements(&server, token_1(), TickSize::Hundredth);
+        let order_mock = mount_unhashed_match(&server, &["trade-1"]);
+        let trade_mock = mount_unresolved_trade(&server, "trade-1", Duration::ZERO);
+        let signer = LocalSigner::from_str(PRIVATE_KEY)?.with_chain_id(Some(POLYGON));
+        let signed_order = client.sign(&signer, SignableOrder::default()).await?;
+
+        let started = std::time::Instant::now();
+        let response = client.post_order(signed_order).await?;
+        let elapsed = started.elapsed();
+
+        assert!(elapsed >= window, "it polled for the window: {elapsed:?}");
+        assert!(
+            elapsed < Duration::from_millis(200),
+            "the wait outlived the window: {elapsed:?}"
+        );
+        assert_eq!(response.order_id, MATCHED_ORDER_ID);
+        assert_eq!(response.trade_ids, vec!["trade-1"]);
+        assert!(response.transaction_hashes.is_empty());
+        order_mock.assert();
+        trade_mock.assert();
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_zero_backfill_window_returns_the_answer_without_reading_trades() -> anyhow::Result<()>
+    {
+        let server = MockServer::start();
+        let config = Config::builder()
+            .use_server_time(true)
+            .transaction_hash_window(Duration::ZERO)
+            .build();
+        let client = create_authenticated_with(&server, config).await?;
+        ensure_requirements(&server, token_1(), TickSize::Hundredth);
+        let order_mock = mount_unhashed_match(&server, &["trade-1"]);
+        let trade_mock = mount_unresolved_trade(&server, "trade-1", Duration::ZERO);
+        let signer = LocalSigner::from_str(PRIVATE_KEY)?.with_chain_id(Some(POLYGON));
+        let signed_order = client.sign(&signer, SignableOrder::default()).await?;
+
+        let response = client.post_order(signed_order).await?;
+
+        assert_eq!(response.order_id, MATCHED_ORDER_ID);
+        assert_eq!(response.trade_ids, vec!["trade-1"]);
+        assert!(response.transaction_hashes.is_empty());
+        order_mock.assert();
+        trade_mock.assert_calls(0);
 
         Ok(())
     }
