@@ -533,6 +533,8 @@ pub fn parse_if_interested(
                             error = %err,
                             "Skipping unknown/invalid WS event in batch"
                         );
+                        #[cfg(not(feature = "tracing"))]
+                        let _: &serde_json::Error = err;
                     })
                     .ok()
             })
