@@ -19,7 +19,7 @@ use crate::Result;
 use crate::auth::ApiKey;
 use crate::clob::types::{OrderStatusType, OrderType, Side, TickSize, TradeStatusType, TraderSide};
 use crate::serde_helpers::StringFromAny;
-use crate::types::{Address, B256, Decimal, U256};
+use crate::types::{Address, B256, ConditionId, Decimal, U256};
 
 #[non_exhaustive]
 #[derive(Clone, Debug, Deserialize, Builder, PartialEq)]
@@ -114,7 +114,8 @@ pub struct GeoblockResponse {
 #[builder(on(String, into))]
 pub struct OrderBookSummaryResponse {
     /// The market condition ID.
-    pub market: B256,
+    #[builder(into)]
+    pub market: ConditionId,
     pub asset_id: U256,
     #[serde_as(as = "TimestampMilliSeconds<String>")]
     pub timestamp: DateTime<Utc>,
@@ -180,7 +181,8 @@ pub struct LastTradesPricesResponse {
 #[serde_as]
 #[derive(Debug, Clone, Deserialize, Builder, PartialEq)]
 pub struct MarketByTokenResponse {
-    pub condition_id: B256,
+    #[builder(into)]
+    pub condition_id: ConditionId,
     #[serde_as(as = "DisplayFromStr")]
     pub primary_token_id: U256,
     #[serde_as(as = "DisplayFromStr")]
@@ -207,7 +209,8 @@ pub struct MarketResponse {
     /// The market condition ID (unique market identifier).
     #[serde_as(as = "NoneAsEmptyString")]
     #[serde(default)]
-    pub condition_id: Option<B256>,
+    #[builder(into)]
+    pub condition_id: Option<ConditionId>,
     /// The CTF question ID.
     #[serde_as(as = "NoneAsEmptyString")]
     #[serde(default)]
@@ -359,7 +362,8 @@ pub struct OpenOrderResponse {
     pub owner: ApiKey,
     pub maker_address: Address,
     /// The market condition ID.
-    pub market: B256,
+    #[builder(into)]
+    pub market: ConditionId,
     pub asset_id: U256,
     pub side: Side,
     pub original_size: Decimal,
@@ -400,7 +404,8 @@ pub struct TradeResponse {
     pub id: String,
     pub taker_order_id: String,
     /// The market condition ID.
-    pub market: B256,
+    #[builder(into)]
+    pub market: ConditionId,
     pub asset_id: U256,
     pub side: Side,
     pub size: Decimal,
@@ -781,7 +786,7 @@ pub struct ClobToken {
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct ClobMarketInfoResponse {
     #[serde(rename = "c")]
-    pub condition_id: B256,
+    pub condition_id: ConditionId,
     #[serde(rename = "t", default)]
     #[serde_as(deserialize_as = "DefaultOnNull")]
     pub tokens: Vec<Option<ClobToken>>,

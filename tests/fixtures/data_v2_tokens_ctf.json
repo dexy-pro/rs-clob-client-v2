@@ -1,0 +1,24 @@
+{
+  "data": [
+    {
+      "token_id": "89264922214887084482987024262661936734253296384243115225704485778301560272625",
+      "condition_id": "0xfd9082cd86853a3c7707ccac8a8a1f36ed929291abcb97ba2c91daa4ba3eb1e0",
+      "structural_condition_id": null,
+      "module": "v1_ctf",
+      "outcome_index": 1,
+      "clob_index": 1,
+      "outcome": "Bulls",
+      "opposite_token_id": "4770630589345892248563857692117303241871557348980709371172099395272142547480",
+      "resolved": false,
+      "final_price": null,
+      "title": "Timberwolves vs. Bulls",
+      "market_slug": "nba-min-chi-2026-10-16",
+      "closed": false,
+      "neg_risk": false,
+      "neg_risk_market_id": null,
+      "question_index": null,
+      "event_id": 1162067,
+      "event_slug": "nba-min-chi-2026-10-16"
+    }
+  ]
+}

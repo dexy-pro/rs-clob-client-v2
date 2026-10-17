@@ -12,12 +12,16 @@ use serde_with::{
 #[cfg(feature = "rfq")]
 use {
     crate::clob::types::{RfqSortBy, RfqSortDir, RfqState},
-    crate::{Timestamp, auth::ApiKey, types::Decimal},
+    crate::{
+        Timestamp,
+        auth::ApiKey,
+        types::{B256, Decimal},
+    },
 };
 
 use crate::clob::types::{AssetType, Side, SignatureType, TimeRange};
 use crate::types::U256;
-use crate::types::{Address, B256};
+use crate::types::{Address, ConditionId};
 
 #[serde_as]
 #[non_exhaustive]
@@ -104,7 +108,8 @@ pub struct PriceHistoryRequest {
 #[builder(on(String, into))]
 pub struct CancelMarketOrderRequest {
     /// The market condition ID to cancel orders for.
-    pub market: Option<B256>,
+    #[builder(into)]
+    pub market: Option<ConditionId>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub asset_id: Option<U256>,
 }
@@ -120,7 +125,8 @@ pub struct TradesRequest {
     #[serde(rename = "maker")]
     pub maker_address: Option<Address>,
     /// The market condition ID to filter trades.
-    pub market: Option<B256>,
+    #[builder(into)]
+    pub market: Option<ConditionId>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub asset_id: Option<U256>,
     pub before: Option<i64>,
@@ -135,7 +141,8 @@ pub struct OrdersRequest {
     #[serde(rename = "id")]
     pub order_id: Option<String>,
     /// The market condition ID to filter orders.
-    pub market: Option<B256>,
+    #[builder(into)]
+    pub market: Option<ConditionId>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub asset_id: Option<U256>,
 }
@@ -499,6 +506,33 @@ mod tests {
         assert_eq!(
             request.query_params(None),
             "?asset_type=COLLATERAL&token_id=1&signature_type=0"
+        );
+    }
+
+    #[test]
+    fn conditional_v2_balance_allowance_request_as_params() {
+        let request = BalanceAllowanceRequest::builder()
+            .asset_type(AssetType::ConditionalV2)
+            .token_id(U256::from(456))
+            .signature_type(SignatureType::Poly1271)
+            .build();
+
+        assert_eq!(
+            request.query_params(None),
+            "?asset_type=CONDITIONAL-V2&token_id=456&signature_type=3"
+        );
+    }
+
+    #[test]
+    fn trades_request_market_keeps_the_condition_width() {
+        let v2: ConditionId = "0x03eebcfb2ee36d4fe02ae9b8503274e42a0000000000000000000000000000"
+            .parse()
+            .expect("31-byte id");
+        let request = TradesRequest::builder().market(v2).build();
+
+        assert_eq!(
+            request.query_params(None),
+            "?market=0x03eebcfb2ee36d4fe02ae9b8503274e42a0000000000000000000000000000"
         );
     }
 

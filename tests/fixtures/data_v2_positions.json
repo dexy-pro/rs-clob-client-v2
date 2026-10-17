@@ -1,0 +1,48 @@
+{
+  "data": [
+    {
+      "proxy_wallet": "0xf753f261f0c07ef3ec3b9eb15d51cbdaa5340b0a",
+      "token_id": "115471406278457772646165365718068474644001192645386099926191854205200987280962",
+      "condition_id": "0x83577f142332a7a90169ab35db5ec039abb2cb0429120bf863db75e04d56e428",
+      "current_size": 10.0,
+      "avg_price": 0.5,
+      "entry_cost_usdc": 5.0,
+      "entry_fees_usdc": 0.125,
+      "total_cost_usdc": 5.125,
+      "current_price": 0.9995,
+      "current_value": 9.995,
+      "total_size": 10.0,
+      "realized_pnl": 0.0,
+      "unrealized_pnl": 4.995,
+      "total_pnl": 4.995,
+      "percent_pnl": 99.9,
+      "percent_realized_pnl": 99.9,
+      "status": "OPEN",
+      "redeemable": false,
+      "mergeable": false,
+      "negative_risk": false,
+      "archived": false,
+      "title": "Spread: Pistons (-9.5)",
+      "slug": "nba-tor-det-2026-10-16-spread-home-9pt5",
+      "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png",
+      "event_id": "1162066",
+      "event_slug": "nba-tor-det-2026-10-16",
+      "outcome": "Raptors",
+      "outcome_index": 1,
+      "opposite_outcome": "Pistons",
+      "opposite_token_id": "114962246345458649318872710347088987152726394691580334632071851950775949609992",
+      "end_date": "2026-10-16",
+      "last_event_at": 1792193993,
+      "first_entry_at": 1792193993,
+      "name": "theprimegoat",
+      "profile_image": "",
+      "verified": false
+    }
+  ],
+  "pagination": {
+    "limit": 2,
+    "offset": 0,
+    "has_more": true,
+    "next_cursor": "eyJkYXRhIjp7InR5cGUiOiJwb3NpdGlvbnMiLCJwYXJhbXMiOnsibCI6MiwiZCI6MiwiayI6IjcuNDM3NSIsInQiOiIxMDgzNDcxMjAwMDkzNDYxMjkyODI4MjcxNDU4MDU2NTM0ODg4OTA4NDk1OTU2OTExMzc1NzU5MTg5NDk4OTYyMjgxMzYyNzU0ODMxNjIiLCJhIjoidSIsImF2IjoiMHhmNzUzZjI2MWYwYzA3ZWYzZWMzYjllYjE1ZDUxY2JkYWE1MzQwYjBhIiwic3QiOiJPUEVOIiwicyI6IkNVUlJFTlRfVkFMVUUiLCJkaXIiOiJERVNDIn19LCJzaWciOiI2NTFkMjI2M2JmNjU5YjM4NDRkYjg4MDc4NWM0NDRhOCJ9"
+  }
+}

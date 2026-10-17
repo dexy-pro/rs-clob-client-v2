@@ -61,6 +61,14 @@ impl Error {
         e.downcast_ref::<E>()
     }
 
+    /// Whether this is an HTTP request that ran out of its configured timeout (see the
+    /// clients' timeout settings). The request may still have reached the server.
+    #[must_use]
+    pub fn is_timeout(&self) -> bool {
+        self.downcast_ref::<reqwest::Error>()
+            .is_some_and(reqwest::Error::is_timeout)
+    }
+
     pub fn validation<S: Into<String>>(message: S) -> Self {
         Validation {
             reason: message.into(),

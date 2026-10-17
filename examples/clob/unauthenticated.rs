@@ -23,7 +23,7 @@ use polymarket_client_sdk_v2::clob::types::request::{
     LastTradePriceRequest, MidpointRequest, OrderBookSummaryRequest, PriceRequest, SpreadRequest,
 };
 use polymarket_client_sdk_v2::clob::{Client, Config};
-use polymarket_client_sdk_v2::types::{B256, Decimal, U256};
+use polymarket_client_sdk_v2::types::{ConditionId, Decimal, U256};
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt as _;
@@ -38,7 +38,7 @@ use tracing_subscriber::util::SubscriberInitExt as _;
 /// - Has tokens with non-zero prices
 ///
 /// This ensures subsequent price/midpoint/orderbook API calls will succeed.
-async fn find_market_with_orderbook(client: &Client) -> anyhow::Result<(U256, B256)> {
+async fn find_market_with_orderbook(client: &Client) -> anyhow::Result<(U256, ConditionId)> {
     info!("Searching for a market with an active orderbook...");
 
     let mut stream = Box::pin(client.stream_data(Client::markets));

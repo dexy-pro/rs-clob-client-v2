@@ -1,0 +1,52 @@
+{
+  "data": [
+    {
+      "proxy_wallet": "0xf753f261f0c07ef3ec3b9eb15d51cbdaa5340b0a",
+      "side": "BUY",
+      "token_id": "89264922214887084482987024262661936734253296384243115225704485778301560272625",
+      "condition_id": "0xfd9082cd86853a3c7707ccac8a8a1f36ed929291abcb97ba2c91daa4ba3eb1e0",
+      "size": 6.172836,
+      "price": 0.8099999741,
+      "timestamp": 1792201815,
+      "title": "Timberwolves vs. Bulls",
+      "slug": "nba-min-chi-2026-10-16",
+      "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png",
+      "event_slug": "",
+      "outcome": "Bulls",
+      "outcome_index": 999,
+      "name": "theprimegoat",
+      "pseudonym": "Brave-Adviser-Pipeline",
+      "bio": "",
+      "profile_image": "",
+      "profile_image_optimized": "",
+      "transaction_hash": "0x889cb8706413f0c534ffb0a7489a5819480a666bdaed2245bc0da0b2efb88fda"
+    },
+    {
+      "proxy_wallet": "0x0e46fe1506310e628240d9fa6302cceddfada831",
+      "side": "BUY",
+      "token_id": "1778752447364788174379468102036537031873325219828321400402142166420920729600",
+      "condition_id": "0x03eebcfb2ee36d4fe02ae9b8503274e42a0000000000000000000000000000",
+      "size": 100.258225,
+      "price": 0.1798417038,
+      "timestamp": 1792201806,
+      "title": "Trail Blazers vs. Warriors AND Nuggets vs. Lakers AND Jazz vs. Suns",
+      "slug": "",
+      "icon": "",
+      "event_slug": "",
+      "outcome": "",
+      "outcome_index": 999,
+      "name": "0x38851e2b39b2840Bf5a7254a83e2619905088E39-1774305885348",
+      "pseudonym": "Shadowy-Commonsense",
+      "bio": "",
+      "profile_image": "",
+      "profile_image_optimized": "",
+      "transaction_hash": "0x4b97b2be7213b7afa6d17d387064a7585172a6631f909d02647d7fab062a0f22"
+    }
+  ],
+  "pagination": {
+    "limit": 500,
+    "offset": 0,
+    "has_more": true,
+    "next_cursor": "eyJkYXRhIjp7InR5cGUiOiJ0cmFkZXMiLCJwYXJhbXMiOnsibCI6NTAwLCJ0cyI6MTc5MjIwMTc1NSwic3EiOiI5NTY2NDI3NDAwMDU2MDY3NzAiLCJkIjo1MDB9fSwic2lnIjoiZDcwZDUxZGIwNGYzZWRhYmNmZTE1ODNjYzM3ZGRiNzgifQ"
+  }
+}

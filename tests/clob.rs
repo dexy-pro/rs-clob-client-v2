@@ -861,7 +861,7 @@ mod unauthenticated {
 
         let response = client.clob_market_info(&condition_id_str).await?;
 
-        assert_eq!(response.condition_id, condition_id);
+        assert_eq!(response.condition_id, condition_id.into());
         assert_eq!(response.tokens.len(), 2);
         let falcons = response.tokens[0].as_ref().expect("token 0 present");
         assert_eq!(falcons.outcome, "Team Falcons");

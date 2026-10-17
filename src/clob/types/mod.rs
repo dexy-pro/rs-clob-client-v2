@@ -310,15 +310,16 @@ pub enum OrderStatusType {
 #[serde(rename_all = "UPPERCASE")]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum TradeStatusType {
-    #[serde(alias = "matched")]
+    // The trades API documents `TRADE_STATUS_*` names for these values.
+    #[serde(alias = "matched", alias = "TRADE_STATUS_MATCHED")]
     Matched,
-    #[serde(alias = "mined")]
+    #[serde(alias = "mined", alias = "TRADE_STATUS_MINED")]
     Mined,
-    #[serde(alias = "confirmed")]
+    #[serde(alias = "confirmed", alias = "TRADE_STATUS_CONFIRMED")]
     Confirmed,
-    #[serde(alias = "retrying")]
+    #[serde(alias = "retrying", alias = "TRADE_STATUS_RETRYING")]
     Retrying,
-    #[serde(alias = "failed")]
+    #[serde(alias = "failed", alias = "TRADE_STATUS_FAILED")]
     Failed,
     /// Unknown trade status type from the API (captures the raw value for debugging).
     #[serde(untagged)]
@@ -334,7 +335,12 @@ pub enum TradeStatusType {
 pub enum AssetType {
     #[default]
     Collateral,
+    /// A CTF outcome token.
     Conditional,
+    /// A Polymarket Protocol V2 position (wire value `CONDITIONAL-V2`).
+    #[serde(rename = "CONDITIONAL-V2")]
+    #[strum(serialize = "CONDITIONAL-V2")]
+    ConditionalV2,
     /// Unknown asset type from the API (captures the raw value for debugging).
     #[serde(untagged)]
     Unknown(String),
@@ -941,6 +947,40 @@ mod tests {
 
     use super::*;
     use crate::error::Validation;
+
+    #[test]
+    fn documented_trade_status_names_parse_to_their_states() {
+        let parse = |raw: &str| -> TradeStatusType {
+            serde_json::from_value(serde_json::Value::String(raw.to_owned()))
+                .unwrap_or_else(|e| panic!("{raw}: {e}"))
+        };
+
+        assert_eq!(parse("TRADE_STATUS_MATCHED"), TradeStatusType::Matched);
+        assert_eq!(parse("TRADE_STATUS_MINED"), TradeStatusType::Mined);
+        assert_eq!(parse("TRADE_STATUS_CONFIRMED"), TradeStatusType::Confirmed);
+        assert_eq!(parse("TRADE_STATUS_RETRYING"), TradeStatusType::Retrying);
+        assert_eq!(parse("TRADE_STATUS_FAILED"), TradeStatusType::Failed);
+        assert_eq!(parse("CONFIRMED"), TradeStatusType::Confirmed);
+        assert_eq!(parse("mined"), TradeStatusType::Mined);
+        // Not a REST trade status: it stays visible rather than becoming a settled state.
+        assert_eq!(
+            parse("TRADE_STATUS_MATCHED_NOT_BROADCASTED"),
+            TradeStatusType::Unknown("TRADE_STATUS_MATCHED_NOT_BROADCASTED".to_owned())
+        );
+    }
+
+    #[test]
+    fn conditional_v2_asset_type_uses_its_wire_name() {
+        assert_eq!(AssetType::ConditionalV2.to_string(), "CONDITIONAL-V2");
+        assert_eq!(
+            to_value(AssetType::ConditionalV2).expect("serialize"),
+            serde_json::json!("CONDITIONAL-V2")
+        );
+        let parsed: AssetType =
+            serde_json::from_value(serde_json::json!("CONDITIONAL-V2")).expect("deserialize");
+        assert_eq!(parsed, AssetType::ConditionalV2);
+        assert_eq!(AssetType::Conditional.to_string(), "CONDITIONAL");
+    }
 
     #[test]
     fn tick_size_decimals_should_succeed() {

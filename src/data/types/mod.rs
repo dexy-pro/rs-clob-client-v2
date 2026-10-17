@@ -8,6 +8,7 @@ use crate::types::{B256, Decimal};
 
 pub mod request;
 pub mod response;
+pub mod v2;
 
 /// The side of a trade (buy or sell).
 ///

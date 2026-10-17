@@ -58,7 +58,7 @@ use crate::clob::types::{
     SignedOrder, TickSize, TradeStatusType,
 };
 use crate::error::{Error, Kind as ErrorKind, Synchronization};
-use crate::types::{Address, B256, Decimal};
+use crate::types::{Address, B256, ConditionId, Decimal};
 use crate::{
     AMOY, POLYGON, Result, Timestamp, ToQueryParams as _, auth, contract_config,
     derive_proxy_wallet, derive_safe_wallet,
@@ -442,6 +442,11 @@ pub struct Config {
     /// Default builder code inherited by orders built via [`Client::limit_order`] or
     /// [`Client::market_order`] when not set on the order itself.
     builder_code: Option<B256>,
+    /// Upper bound on each HTTP request, from connecting until the response body is read.
+    /// `None` (the default) leaves requests unbounded. A request that runs out of time fails
+    /// with an error for which [`crate::error::Error::is_timeout`] is `true`; for an order
+    /// submission that means its outcome is unknown, not that it was rejected.
+    timeout: Option<Duration>,
     #[cfg(feature = "heartbeats")]
     #[builder(default = Duration::from_secs(5))]
     /// How often the [`Client`] will automatically submit heartbeats. The default is five (5) seconds.
@@ -454,6 +459,7 @@ impl Default for Config {
             use_server_time: false,
             geoblock_host: None,
             builder_code: None,
+            timeout: None,
             #[cfg(feature = "heartbeats")]
             heartbeat_interval: Duration::from_secs(5),
         }
@@ -483,7 +489,7 @@ struct ClientInner<S: State> {
     /// V2 fee parameters from `/clob-markets/{id}` `fd`, used for market-order fee sizing.
     fee_infos: DashMap<U256, FeeInfo>,
     /// Caches `token_id -> condition_id` to avoid repeated `/markets-by-token` calls.
-    token_condition_map: DashMap<U256, B256>,
+    token_condition_map: DashMap<U256, ConditionId>,
     /// Local cache of builder fee rates per builder code
     builder_fee_rates: DashMap<B256, BuilderFeeRateResponse>,
     /// Lazily resolved CLOB protocol version. `0` means uncached.
@@ -1494,7 +1500,11 @@ impl Client<Unauthenticated> {
         headers.insert("Connection", HeaderValue::from_static("keep-alive"));
         headers.insert("Content-Type", HeaderValue::from_static("application/json"));
 
-        let client = ReqwestClient::builder().default_headers(headers).build()?;
+        let mut builder = ReqwestClient::builder().default_headers(headers);
+        if let Some(timeout) = config.timeout {
+            builder = builder.timeout(timeout);
+        }
+        let client = builder.build()?;
 
         let geoblock_host = Url::parse(
             config

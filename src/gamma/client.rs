@@ -29,6 +29,8 @@ use std::future::Future;
 
 use async_stream::try_stream;
 use futures::Stream;
+use std::time::Duration;
+
 use reqwest::{
     Client as ReqwestClient, Method,
     header::{HeaderMap, HeaderValue},
@@ -99,13 +101,33 @@ impl Client {
     ///
     /// Returns an error if the URL is invalid or the HTTP client cannot be created.
     pub fn new(host: &str) -> Result<Client> {
+        Self::build(host, None)
+    }
+
+    /// Creates a new Gamma API client whose HTTP requests each give up after `timeout`.
+    ///
+    /// A request that runs out of time fails with an error for which
+    /// [`crate::error::Error::is_timeout`] is `true`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the URL is invalid or the HTTP client cannot be created.
+    pub fn with_timeout(host: &str, timeout: Duration) -> Result<Client> {
+        Self::build(host, Some(timeout))
+    }
+
+    fn build(host: &str, timeout: Option<Duration>) -> Result<Client> {
         let mut headers = HeaderMap::new();
 
         headers.insert("User-Agent", HeaderValue::from_static("rs_clob_client"));
         headers.insert("Accept", HeaderValue::from_static("*/*"));
         headers.insert("Connection", HeaderValue::from_static("keep-alive"));
         headers.insert("Content-Type", HeaderValue::from_static("application/json"));
-        let client = ReqwestClient::builder().default_headers(headers).build()?;
+        let mut builder = ReqwestClient::builder().default_headers(headers);
+        if let Some(timeout) = timeout {
+            builder = builder.timeout(timeout);
+        }
+        let client = builder.build()?;
 
         Ok(Self {
             host: Url::parse(host)?,

@@ -10,8 +10,9 @@ use serde_with::NoneAsEmptyString;
 use serde_with::json::JsonString;
 use serde_with::{DisplayFromStr, StringWithSeparator, formats::CommaSeparator, serde_as};
 
+use super::{MarketVersion, ResolutionStatus};
 use crate::serde_helpers::StringFromAny;
-use crate::types::{Address, B256, Decimal, U256};
+use crate::types::{Address, B256, ConditionId, Decimal, U256};
 
 /// Image optimization metadata.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Builder)]
@@ -346,7 +347,8 @@ pub struct Market {
     pub question: Option<String>,
     #[serde_as(as = "NoneAsEmptyString")]
     #[serde(default)]
-    pub condition_id: Option<B256>,
+    #[builder(into)]
+    pub condition_id: Option<ConditionId>,
     pub slug: Option<String>,
     pub twitter_card_image: Option<String>,
     pub resolution_source: Option<String>,
@@ -418,8 +420,17 @@ pub struct Market {
     pub volume_1yr: Option<Decimal>,
     pub game_start_time: Option<String>,
     pub seconds_delay: Option<i32>,
+    /// The protocol this market trades on; it selects between `clob_token_ids` (V1) and
+    /// `position_ids` (V2).
+    pub version: Option<MarketVersion>,
     #[serde_as(as = "Option<JsonString>")]
     pub clob_token_ids: Option<Vec<U256>>,
+    /// Protocol V2 outcome position ids (a JSON array of decimal strings, unlike the
+    /// JSON-encoded `clob_token_ids`).
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub position_ids: Option<Vec<U256>>,
+    /// Protocol V2 resolution state.
+    pub resolution_status: Option<ResolutionStatus>,
     pub disqus_thread: Option<String>,
     pub short_outcomes: Option<String>,
     #[serde(rename = "teamAID")]
@@ -529,7 +540,8 @@ pub struct ClobReward {
     pub asset_address: Option<Address>,
     #[serde_as(as = "NoneAsEmptyString")]
     #[serde(default)]
-    pub condition_id: Option<B256>,
+    #[builder(into)]
+    pub condition_id: Option<ConditionId>,
     pub start_date: Option<NaiveDate>,
     pub end_date: Option<NaiveDate>,
     pub rewards_amount: Option<Decimal>,

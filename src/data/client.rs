@@ -24,6 +24,8 @@
 //! # }
 //! ```
 
+use std::time::Duration;
+
 use reqwest::{
     Client as ReqwestClient, Method,
     header::{HeaderMap, HeaderValue},
@@ -41,6 +43,7 @@ use super::types::response::{
     Activity, BuilderLeaderboardEntry, BuilderVolumeEntry, ClosedPosition, Health, LiveVolume,
     MetaHolder, OpenInterest, Position, Trade, Traded, TraderLeaderboardEntry, Value,
 };
+use super::types::v2;
 use crate::{Result, ToQueryParams as _};
 
 /// HTTP client for the Polymarket Data API.
@@ -87,13 +90,33 @@ impl Client {
     ///
     /// Returns an error if the URL is invalid or the HTTP client cannot be created.
     pub fn new(host: &str) -> Result<Client> {
+        Self::build(host, None)
+    }
+
+    /// Creates a new Data API client whose HTTP requests each give up after `timeout`.
+    ///
+    /// A request that runs out of time fails with an error for which
+    /// [`crate::error::Error::is_timeout`] is `true`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the URL is invalid or the HTTP client cannot be created.
+    pub fn with_timeout(host: &str, timeout: Duration) -> Result<Client> {
+        Self::build(host, Some(timeout))
+    }
+
+    fn build(host: &str, timeout: Option<Duration>) -> Result<Client> {
         let mut headers = HeaderMap::new();
 
         headers.insert("User-Agent", HeaderValue::from_static("rs_clob_client"));
         headers.insert("Accept", HeaderValue::from_static("*/*"));
         headers.insert("Connection", HeaderValue::from_static("keep-alive"));
         headers.insert("Content-Type", HeaderValue::from_static("application/json"));
-        let client = ReqwestClient::builder().default_headers(headers).build()?;
+        let mut builder = ReqwestClient::builder().default_headers(headers);
+        if let Some(timeout) = timeout {
+            builder = builder.timeout(timeout);
+        }
+        let client = builder.build()?;
 
         Ok(Self {
             host: Url::parse(host)?,
@@ -273,5 +296,46 @@ impl Client {
         req: &BuilderVolumeRequest,
     ) -> Result<Vec<BuilderVolumeEntry>> {
         self.get("v1/builders/volume", req).await
+    }
+
+    /// Fetches one page of `GET /v2/positions`: a user's positions (or a market's holders)
+    /// filtered by lifecycle `status`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails or the API returns an error response.
+    pub async fn positions_v2(&self, req: &v2::PositionsRequest) -> Result<v2::Page<v2::Position>> {
+        self.get("v2/positions", req).await
+    }
+
+    /// Fetches one page of `GET /v2/trades`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails or the API returns an error response.
+    pub async fn trades_v2(&self, req: &v2::TradesRequest) -> Result<v2::Page<v2::Trade>> {
+        self.get("v2/trades", req).await
+    }
+
+    /// Fetches `GET /v2/value`: holdings marked to market plus unresolved combos at cost basis.
+    /// Cash is not included.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails or the API returns an error response.
+    pub async fn value_v2(&self, req: &v2::ValueRequest) -> Result<v2::PortfolioValue> {
+        let envelope: v2::Envelope<v2::PortfolioValue> = self.get("v2/value", req).await?;
+        Ok(envelope.data)
+    }
+
+    /// Looks up tokens with `GET /v2/tokens`: their condition, module (CTF or Protocol V2
+    /// family), outcome slot and market. Unknown ids are absent from the result.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails or the API returns an error response.
+    pub async fn tokens(&self, req: &v2::TokensRequest) -> Result<Vec<v2::TokenRef>> {
+        let envelope: v2::Envelope<Vec<v2::TokenRef>> = self.get("v2/tokens", req).await?;
+        Ok(envelope.data)
     }
 }
